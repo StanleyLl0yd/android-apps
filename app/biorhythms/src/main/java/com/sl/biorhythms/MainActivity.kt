@@ -1,22 +1,46 @@
 package com.sl.biorhythms
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.FloatRange
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -43,18 +67,18 @@ import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.sin
 
-private val Context.dataStore by preferencesDataStore("settings")
+// ---------------- DataStore ----------------
+val Context.dataStore by preferencesDataStore("settings")
 
-/* --- Модель --- */
-
+// ---------------- Модель ----------------
 private enum class Cycle(
     val period: Int,
     val color: Color,
     val pick: (BPoint) -> Float
 ) {
-    Physical(23, Color(0xFFEF5350), { it.physical }),       // красный
-    Emotional(28, Color(0xFF42A5F5), { it.emotional }),     // синий
-    Intellectual(33, Color(0xFF66BB6A), { it.intellectual })// зелёный
+    Physical(23, Color(0xFFEF5350), { it.physical }),
+    Emotional(28, Color(0xFF42A5F5), { it.emotional }),
+    Intellectual(33, Color(0xFF66BB6A), { it.intellectual })
 }
 
 private data class BPoint(
@@ -94,8 +118,7 @@ private fun Float.toPct() = (this * 100f).toInt()
 private val dateFmt: DateTimeFormatter =
     DateTimeFormatter.ofPattern("d LLL", Locale.getDefault())
 
-/* --- UI --- */
-
+// ---------------- Activity ----------------
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,7 +126,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// ---------------- UI ----------------
 @OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("NewApi")
 @Composable
 fun App() {
     val activity = LocalContext.current as ComponentActivity
@@ -111,13 +136,12 @@ fun App() {
     val keyDob = remember { longPreferencesKey("dob_epoch_day") }
 
     var birthDate by remember { mutableStateOf<LocalDate?>(null) }
-    val showPicker = rememberSaveable { mutableStateOf(false) }
-    val showInfo = remember { mutableStateOf(false) }
+    var showPicker by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val epoch = activity.dataStore.data.first()[keyDob]
-        if (epoch != null) birthDate = LocalDate.ofEpochDay(epoch)
-        else showPicker.value = true
+        if (epoch != null) birthDate = LocalDate.ofEpochDay(epoch) else showPicker = true
     }
 
     fun saveDob(date: LocalDate) = scope.launch {
@@ -131,14 +155,14 @@ fun App() {
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton({ showInfo.value = true }) {
+                            Text("Биоритмы")
+                            IconButton(onClick = { showInfo = true }) {
                                 Icon(Icons.Outlined.Info, contentDescription = "Справка")
                             }
-                            Text("Биоритмы")
                         }
                     },
                     actions = {
-                        TextButton({ showPicker.value = true }) { Text("Сменить дату") }
+                        TextButton(onClick = { showPicker = true }) { Text("Сменить дату") }
                     }
                 )
             }
@@ -147,57 +171,53 @@ fun App() {
                 if (birthDate == null) {
                     Column(
                         Modifier.fillMaxSize().padding(24.dp),
-                        verticalArrangement = Arrangement.Center,
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Укажите дату рождения, чтобы построить график.",
+                            "Укажите дату рождения, чтобы построить график биоритмов.",
                             style = MaterialTheme.typography.titleMedium
                         )
                         Spacer(Modifier.height(16.dp))
-                        Button({ showPicker.value = true }) { Text("Выбрать дату") }
+                        Button(onClick = { showPicker = true }) { Text("Выбрать дату") }
                     }
                 } else {
-                    BiorhythmScreen(birthDate!!)
+                    BiorhythmScreen(birthDate = birthDate!!)
                 }
             }
 
-            if (showPicker.value) {
+            if (showPicker) {
                 val state = rememberDatePickerState()
                 DatePickerDialog(
-                    onDismissRequest = { showPicker.value = false },
+                    onDismissRequest = { showPicker = false },
                     confirmButton = {
-                        TextButton({
+                        TextButton(onClick = {
                             state.selectedDateMillis?.let {
-                                saveDob(
-                                    Instant.ofEpochMilli(it)
-                                        .atZone(ZoneId.systemDefault())
-                                        .toLocalDate()
-                                )
+                                val date = Instant.ofEpochMilli(it)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                                saveDob(date)
                             }
-                            showPicker.value = false
+                            showPicker = false
                         }) { Text("Готово") }
                     },
-                    dismissButton = { TextButton({ showPicker.value = false }) { Text("Отмена") } }
-                ) { DatePicker(state = state, showModeToggle = true) }
+                    dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Отмена") } }
+                ) {
+                    DatePicker(state = state, showModeToggle = true)
+                }
             }
 
-            if (showInfo.value) {
+            if (showInfo) {
                 AlertDialog(
-                    onDismissRequest = { showInfo.value = false },
-                    confirmButton = { TextButton({ showInfo.value = false }) { Text("Понятно") } },
+                    onDismissRequest = { showInfo = false },
+                    confirmButton = { TextButton(onClick = { showInfo = false }) { Text("Понятно") } },
                     title = { Text("О биоритмах") },
                     text = {
                         Text(
-                            """
-                            Три синусоидальных цикла с даты рождения:
-                            • Физический — 23 дня
-                            • Эмоциональный — 28 дней
-                            • Интеллектуальный — 33 дня
-
-                            Значения: −100…+100 (внутри −1…+1 × 100). Ноль — смена фазы.
-                            Модель популярна, но научной валидности не имеет.
-                            """.trimIndent()
+                            "Три синусоидальных цикла, считаются с вашей даты рождения: " +
+                                    "физический — 23 дня, эмоциональный — 28, интеллектуальный — 33. " +
+                                    "Значения отображаются как проценты от −100 до +100. " +
+                                    "Модель носит справочно-развлекательный характер и не является медицинской."
                         )
                     }
                 )
@@ -208,26 +228,43 @@ fun App() {
 
 @Composable
 private fun BiorhythmScreen(birthDate: LocalDate) {
-    val center = remember { LocalDate.now() }
-    val span = 15
-    val points = remember(birthDate, center) { generateSeries(birthDate, center, span, span) }
-    val today = remember(points) { points[span] }
+    // Гарантированно используем foundation-версию через FQN
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier = Modifier.fillMaxSize().padding(16.dp)
+    ) {
+        // Высота графика адаптивна к ориентации:
+        val chartHeight = remember(this.maxWidth, this.maxHeight) {
+            val portraitLike = this.maxHeight >= this.maxWidth
+            val base = if (portraitLike) this.maxWidth * 0.45f else this.maxHeight * 0.60f
+            base.coerceIn(220.dp, 520.dp)
+        }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("Дата рождения: $birthDate", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(12.dp))
+        val center = remember { LocalDate.now() }
+        val span = 15
+        val points = remember(birthDate, center) { generateSeries(birthDate, center, span, span) }
+        val today = points[span]
 
-        BiorhythmChart(
-            data = points,
-            height = 260.dp,
-            leftDays = span,
-            rightDays = span,
-            centerDate = center
-        )
+        val scroll = rememberScrollState()
+        // На всякий случай — тоже FQN, чтобы IDE не подсовывала ui.layout
+        androidx.compose.foundation.layout.Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(scroll)
+        ) {
+            Text("Дата рождения: $birthDate", style = MaterialTheme.typography.titleMedium)
+            androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
 
-        Spacer(Modifier.height(12.dp))
+            BiorhythmChart(
+                data = points,
+                height = chartHeight,
+                leftDays = span,
+                rightDays = span,
+                centerDate = center
+            )
 
-        ValuesRow(today.physical, today.emotional, today.intellectual)
+            androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
+            ValuesRow(today.physical, today.emotional, today.intellectual)
+        }
     }
 }
 
@@ -235,8 +272,11 @@ private fun BiorhythmScreen(birthDate: LocalDate) {
 private fun ValuesRow(p: Float, e: Float, i: Float) {
     Card(Modifier.fillMaxWidth(), elevation = CardDefaults.cardElevation(1.dp)) {
         Row(
-            Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             ValueChip("Физический", p.toPct(), Cycle.Physical.color)
             ValueChip("Эмоциональный", e.toPct(), Cycle.Emotional.color)
@@ -287,19 +327,20 @@ private fun BiorhythmChart(
                 val t = i.toFloat() / total.coerceAtLeast(1)
                 return L + t * (R - L)
             }
+
             fun mapY(@FloatRange(from = -1.0, to = 1.0) v: Float): Float {
                 val t = (v + 1f) / 2f
                 return B - t * (B - T)
             }
 
-            // фон
+            // фон области графика
             drawRect(
                 color = bgColor,
                 topLeft = Offset(L, T),
                 size = androidx.compose.ui.geometry.Size(R - L, B - T)
             )
 
-            // горизонтальные линии
+            // горизонтальные линии сетки
             listOf(-1f, -0.5f, 0f, 0.5f, 1f).forEach { yv ->
                 drawLine(
                     color = when (yv) { 0f -> zeroLine; -0.5f, 0.5f -> gridHalf; else -> gridDay },
@@ -311,7 +352,7 @@ private fun BiorhythmChart(
 
             val total = data.size - 1
 
-            // вертикальная сетка по дням
+            // вертикальные линии по дням + «сегодня»
             for (i in 0..total) {
                 drawLine(
                     color = if (i == leftDays) todayColor else gridDay,
@@ -321,7 +362,7 @@ private fun BiorhythmChart(
                 )
             }
 
-            // подписи дат
+            // подписи дат (d LLL)
             drawContext.canvas.nativeCanvas.apply {
                 val p = android.graphics.Paint().apply {
                     color = android.graphics.Color.DKGRAY
@@ -340,7 +381,8 @@ private fun BiorhythmChart(
             val stroke = Stroke(4f, cap = StrokeCap.Round)
             fun pathOf(sel: (BPoint) -> Float) = Path().apply {
                 data.forEachIndexed { i, bp ->
-                    val x = mapX(i, total); val y = mapY(sel(bp))
+                    val x = mapX(i, total)
+                    val y = mapY(sel(bp))
                     if (i == 0) moveTo(x, y) else lineTo(x, y)
                 }
             }

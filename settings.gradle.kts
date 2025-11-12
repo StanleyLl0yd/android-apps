@@ -1,9 +1,8 @@
 pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories { google(); mavenCentral() }
-}
-rootProject.name = "everyday-android-apps"
+dependencyResolutionManagement { repositories { google(); mavenCentral() } }
 
-include(":apps:biorhythms")
-project(":apps:biorhythms").projectDir = file("apps/biorhythms")
+rootProject.name = "android-apps"
+
+// модуль физически лежит в ./app/biorhythms
+include(":app:biorhythms")
+project(":app:biorhythms").projectDir = file("app/biorhythms")
