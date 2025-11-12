@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Сжимаем рисунок до ~76% и центрируем, чтобы он точно поместился в круг -->
+    <group
+        android:scaleX="0.76"
+        android:scaleY="0.76"
+        android:translateX="12.96"
+        android:translateY="12.96">
+
+        <!-- красная волна (3 коротких периода) -->
+        <path
+            android:strokeColor="#EF5350"
+            android:strokeWidth="5"
+            android:fillColor="@android:color/transparent"
+            android:strokeLineCap="round"
+            android:pathData="
+                M6,54
+                C12,42 18,42 24,54
+                S36,66 42,54
+                S54,42 60,54
+                S72,66 78,54
+                S90,42 96,54
+                S102,66 108,54" />
+
+        <!-- синяя волна (сдвинута по фазе) -->
+        <path
+            android:strokeColor="#42A5F5"
+            android:strokeWidth="5"
+            android:fillColor="@android:color/transparent"
+            android:strokeLineCap="round"
+            android:pathData="
+                M6,60
+                C12,48 18,48 24,60
+                S36,72 42,60
+                S54,48 60,60
+                S72,72 78,60
+                S90,48 96,60
+                S102,72 108,60" />
+
+        <!-- зелёная волна (сдвиг в другую сторону) -->
+        <path
+            android:strokeColor="#66BB6A"
+            android:strokeWidth="5"
+            android:fillColor="@android:color/transparent"
+            android:strokeLineCap="round"
+            android:pathData="
+                M6,48
+                C12,36 18,36 24,48
+                S36,60 42,48
+                S54,36 60,48
+                S72,60 78,48
+                S90,36 96,48
+                S102,60 108,48" />
+    </group>
+</vector>
